@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  backend:
+    image: my-backend:latest
+    container_name: backend-dev
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=123456789
+      - MONGO_INITDB_DATABASE=policestation
+      - MONGO_HOST=192.168.94.129
+      - MONGO_PORTS=27017,27018,27019
+      - REPLICA_SET_NAME=rs0
+      - AUTH_SOURCE=admin
+      - READ_PREFERENCE=secondaryPreferred
+      - MONGO_TLS=false
+      - MONGO_TLS_CERT_FILE=./cert/cert.pem
+      - SOLR_HOST=http://192.168.94.129:8983/solr
+      - SOLR_AUTH_USER=solr
+      - SOLR_AUTH_PASSWORD=123456789
+      - SOLR_QUERY=http://192.168.94.129:8983/solr/investigations/select
+      - SOLR_COLLECTIONS_LIST=http://192.168.94.129:8983/solr/admin/collections?action=LIST&wt=json
+      - REDIS_HOST=192.168.94.129
+      - REDIS_PORT=6379
+      - NIFI_BASE_URL=http://192.168.94.129:8088/nifi-api
+      - NIFI_USERNAME=nifiUser
+      - NIFI_PASSWORD=nifiPass
+      - ZOOKEEPER_CONNECTION_STRING=zookeeper:2181,zookeeper2:2181,zookeeper3:2181
+    volumes:
+      - ./:/usr/src/app
+    networks:
+      - bigdata_network
+
+  frontend:
+    image: my-frontend:latest
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_BASE_URL=http://backend-dev:5000/api
+    volumes:
+      - ./frontend:/app
+    networks:
+      - bigdata_network
+    depends_on:
+      - backend

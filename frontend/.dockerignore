@@ -1,0 +1,12 @@
+node_modules
+*.log
+logs
+build
+.dockerignore
+.env
+.DS_Store
+*.swp
+*.swo
+.git
+.gitignore
+.github

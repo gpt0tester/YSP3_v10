@@ -1,0 +1,15 @@
+{
+  "name": "solr-sink-connector",
+  "config": {
+    "connector.class": "com.datamountaineer.streamreactor.connect.solr.SolrSinkConnector",
+    "tasks.max": "1",
+    "topics": "your_topic_name",
+    "solr.url": "http://solr:8983/solr",
+    "solr.collection": "mongo_core",
+    "solr.commit.within.ms": "5000",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "solr.error.policy": "NOOP"
+  }
+}

@@ -1,0 +1,255 @@
+version: "3.8"
+
+services:
+  zookeeper_test:
+    image: zookeeper:latest
+    container_name: zookeeper_test
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181 server.2=zookeeper2:2888:3888;2182 server.3=zookeeper3:2888:3888;2183
+    networks:
+      - network_test
+    volumes:
+      - ./zookeeper-conf/zoo.cfg:/conf/zoo.cfg
+      - ../.env/zookeeper_data:/var/lib/zookeeper/data
+      - ../.env/zookeeper_txn_logs:/var/lib/zookeeper/log
+    ports:
+      - "2181:2181" # Client port
+      - "2888:2888" # Leader election port
+      - "3888:3888" # Leader communication port
+
+  zookeeper2:
+    image: zookeeper:latest
+    container_name: zookeeper2
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181 server.2=zookeeper2:2888:3888;2182 server.3=zookeeper3:2888:3888;2183
+    networks:
+      - bigdata_network
+    volumes:
+      - ./zookeeper-conf/zoo.cfg:/conf/zoo.cfg
+      - ../.env/zookeeper2_data:/var/lib/zookeeper/data
+      - ../.env/zookeeper2_txn_logs:/var/lib/zookeeper/log
+    ports:
+      - "2182:2181"
+      - "2889:2888"
+      - "3889:3888"
+
+  zookeeper3:
+    image: zookeeper:latest
+    container_name: zookeeper3
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zookeeper:2888:3888;2181 server.2=zookeeper2:2888:3888;2182 server.3=zookeeper3:2888:3888;2183
+    networks:
+      - bigdata_network
+    volumes:
+      - ./zookeeper-conf/zoo.cfg:/conf/zoo.cfg
+      - ../.env/zookeeper3_data:/var/lib/zookeeper/data
+      - ../.env/zookeeper3_txn_logs:/var/lib/zookeeper/log
+    ports:
+      - "2183:2181"
+      - "2890:2888"
+      - "3890:3888"
+
+  zoonavigator:
+    image: elkozmon/zoonavigator:latest
+    container_name: zoonavigator
+    environment:
+      - HTTP_PORT=8800
+    ports:
+      - "8800:8800"
+    networks:
+      - bigdata_network
+    depends_on:
+      - zookeeper
+
+  solr_test:
+    image: solr:latest
+    container_name: solr_test
+    networks:
+      - bigdata_network
+    command: solr -f -c -z zookeeper:2181,zookeeper2:2181,zookeeper3:2181
+    ports:
+      - "8983:8983"
+    depends_on:
+      - zookeeper
+      - zookeeper2
+      - zookeeper3
+
+  nifi_test:
+    image: apache/nifi:1.28.1
+    container_name: nifi
+    networks:
+      - bigdata_network
+    ports:
+      - "8443:8443"
+    environment:
+      - NIFI_WEB_HTTPS_PORT=8443
+      - NIFI_WEB_PROXY_HOST=192.168.94.129:8443
+      # - NIFI_WEB_HTTPS_HOST=192.168.94.129
+      # - NIFI_CLUSTER_IS_NODE=true
+      # - NIFI_CLUSTER_NODE_ADDRESS=nifi
+      # - NIFI_CLUSTER_NODE_PROTOCOL_PORT=8082
+      # - NIFI_ZOOKEEPER_CONNECT_STRING=zookeeper:2181,zookeeper2:2181,zookeeper3:2181
+      # volumes:
+      # - ./nifi-conf/nifi.properties.template:/opt/nifi/nifi-current/conf/nifi.properties.template
+      # - ./nifi-conf/authorizers.xml:/opt/nifi/nifi-current/conf/authorizers.xml
+      # - ./nifi-conf/login-identity-providers.xml:/opt/nifi/nifi-current/conf/login-identity-providers.xml
+      - ./certs:/opt/nifi/certs
+    depends_on:
+      - zookeeper
+
+  mongodb-primary_test:
+    image: mongo:8.0.3 # Pin to a specific version for stability
+    container_name: mongodb-primary
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: 123456789 # Must match primary
+      MONGO_INITDB_DATABASE: mydatabase # Optional: Specify a default database
+    ports:
+      - "27017:27017"
+    volumes:
+      - ../.env/mongodb_primary_data:/data/db
+      - ../.env/mongodb_keyfile/mongodb-keyfile:/data/configdb/keyfile
+    networks:
+      - bigdata_network
+    command:
+      [
+        "mongod",
+        "--replSet",
+        "rs0",
+        "--auth",
+        "--keyFile",
+        "/data/configdb/keyfile",
+      ]
+    depends_on:
+      - zookeeper
+
+  # MongoDB Secondary 1
+  mongodb-secondary1_test:
+    image: mongo:8.0.3
+    container_name: mongodb-secondary1
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: 123456789 # Must match primary
+      MONGO_INITDB_DATABASE: mydatabase
+    ports:
+      - "27018:27017"
+    volumes:
+      - ../.env/mongodb_secondary1_data:/data/db
+      - ../.env/mongodb_keyfile/mongodb-keyfile:/data/configdb/keyfile
+    networks:
+      - bigdata_network
+    command:
+      [
+        "mongod",
+        "--replSet",
+        "rs0",
+        "--auth",
+        "--keyFile",
+        "/data/configdb/keyfile",
+      ]
+    depends_on:
+      - mongodb-primary
+
+  # MongoDB Secondary 2
+  mongodb-secondary2_test:
+    image: mongo:8.0.3
+    container_name: mongodb-secondary2
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: 123456789 # Must match primary
+      MONGO_INITDB_DATABASE: mydatabase
+    ports:
+      - "27019:27017"
+    volumes:
+      - ../.env/mongodb_secondary2_data:/data/db
+      - ../.env/mongodb_keyfile/mongodb-keyfile:/data/configdb/keyfile
+    networks:
+      - bigdata_network
+    command:
+      [
+        "mongod",
+        "--replSet",
+        "rs0",
+        "--auth",
+        "--keyFile",
+        "/data/configdb/keyfile",
+      ]
+    depends_on:
+      - mongodb-primary
+
+    # Redis service
+  redis_test:
+    image: redis:7.0 # or another stable version
+    container_name: redis
+    restart: always
+    networks:
+      - bigdata_network
+    ports:
+      - "6379:6379"
+
+  backend:
+    image: my-backend:latest
+    container_name: backend-dev
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=123456789
+      - MONGO_INITDB_DATABASE=policestation
+      - MONGO_HOST=192.168.94.129
+      - MONGO_PORTS=27017,27018,27019
+      - REPLICA_SET_NAME=rs0
+      - AUTH_SOURCE=admin
+      - READ_PREFERENCE=secondaryPreferred
+      - MONGO_TLS=false
+      - MONGO_TLS_CERT_FILE=./cert/cert.pem
+      - SOLR_HOST=http://192.168.94.129:8983/solr
+      - SOLR_AUTH_USER=solr
+      - SOLR_AUTH_PASSWORD=123456789
+      - SOLR_QUERY=http://192.168.94.129:8983/solr/investigations/select
+      - SOLR_COLLECTIONS_LIST=http://192.168.94.129:8983/solr/admin/collections?action=LIST&wt=json
+      - REDIS_HOST=192.168.94.129
+      - REDIS_PORT=6379
+      - NIFI_BASE_URL=http://192.168.94.129:8088/nifi-api
+      - NIFI_USERNAME=nifiUser
+      - NIFI_PASSWORD=nifiPass
+      - ZOOKEEPER_CONNECTION_STRING=zookeeper:2181,zookeeper2:2181,zookeeper3:2181
+    volumes:
+      - ./:/usr/src/app
+    networks:
+      - bigdata_network
+    depends_on:
+      - mongo
+      - solr_test
+
+  frontend:
+    image: my-frontend:latest
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_BASE_URL=http://localhost:5000/api
+    volumes:
+      - ./frontend:/app
+    networks:
+      - bigdata_network
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_primary_data_test:
+  mongodb_secondary1_data_test:
+  mongodb_secondary2_data_test:
+  mongodb_keyfile_test:
+
+networks:
+  network_test:
+    driver: bridge

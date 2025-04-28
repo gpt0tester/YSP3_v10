@@ -1,0 +1,34 @@
+# nifi.properties.template
+
+# Web Configuration
+nifi.web.https.port=${NIFI_WEB_HTTPS_PORT}
+nifi.web.https.host=${NIFI_WEB_HTTPS_HOST}
+
+# Clustering Configuration
+nifi.cluster.is.node=${NIFI_CLUSTER_IS_NODE}
+nifi.cluster.node.address=${NIFI_CLUSTER_NODE_ADDRESS}
+nifi.cluster.node.protocol.port=${NIFI_CLUSTER_NODE_PROTOCOL_PORT}
+nifi.zookeeper.connect.string=${NIFI_ZOOKEEPER_CONNECT_STRING}
+nifi.zookeeper.root.node=/nifi
+
+# Python Command Configuration
+# nifi.python.command=${NIFI_PYTHON_COMMAND}
+
+# Security Configuration
+nifi.security.keystore=/opt/nifi/certs/keystore.jks
+nifi.security.keystoreType=JKS
+nifi.security.keystorePasswd=${NIFI_SECURITY_KEYSTORE_PASSWD}
+nifi.security.keyPasswd=${NIFI_SECURITY_KEY_PASSWD}
+nifi.security.keyAlias=nifi
+
+nifi.security.truststore=/opt/nifi/certs/truststore.jks
+nifi.security.truststoreType=JKS
+nifi.security.truststorePasswd=${NIFI_SECURITY_TRUSTSTORE_PASSWD}
+
+# TLS Protocol
+nifi.security.protocol=TLSv1.2
+
+# Optional: Cipher Suites
+nifi.security.tls.cipher.suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_GCM_SHA256
+
+# Additional configurations as needed...

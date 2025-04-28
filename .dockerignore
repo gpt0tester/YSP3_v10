@@ -1,0 +1,15 @@
+node_modules
+*.log
+logs
+build
+.dockerignore
+.env
+.DS_Store
+*.swp
+*.swo
+coverage
+test-output
+dist
+.git
+.gitignore
+.github
